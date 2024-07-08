@@ -1,18 +1,15 @@
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
+const path = require('path');
 const app = express();
 
 app.use(express.json());
 app.use(cors());
-
-
 app.use(express.static('dist'));
-
 
 morgan.token('body', (req) => JSON.stringify(req.body));
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
-
 
 let persons = [
   { id: 1, name: "Arto Hellas", number: "040-123456" },
@@ -61,7 +58,7 @@ app.post('/api/persons', (request, response) => {
   }
 
   const person = {
-    id: Math.floor(Math.random() * 10000), 
+    id: Math.floor(Math.random() * 10000),
     name: body.name,
     number: body.number
   };
@@ -70,6 +67,10 @@ app.post('/api/persons', (request, response) => {
   response.json(person);
 });
 
+
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+});
 
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' });
