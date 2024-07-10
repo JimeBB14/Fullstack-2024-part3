@@ -1,65 +1,65 @@
-const express = require('express');
-const app = express();
-const cors = require('cors');
-const mongoose = require('mongoose');
-require('dotenv').config();
+const express = require('express')
+const app = express()
+const cors = require('cors')
+const mongoose = require('mongoose')
+require('dotenv').config()
 
-const Person = require('./models/person');
-const errorHandler = require('./middleware/errorHandler');
+const Person = require('./models/person')
+const errorHandler = require('./middleware/errorHandler')
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static('dist'));
+app.use(cors())
+app.use(express.json())
+app.use(express.static('dist'))
 
-mongoose.set('strictQuery', false);
+mongoose.set('strictQuery', false)
 
-const url = process.env.MONGODB_URI;
+const url = process.env.MONGODB_URI
 
 mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(result => {
-    console.log('Connected to MongoDB');
+  .then(() => {
+    console.log('Connected to MongoDB')
   })
   .catch((error) => {
-    console.log('Error connecting to MongoDB:', error.message);
-  });
+    console.log('Error connecting to MongoDB:', error.message)
+  })
 
 app.get('/api/persons', (req, res, next) => {
   Person.find({})
     .then(persons => {
-      res.json(persons);
+      res.json(persons)
     })
-    .catch(error => next(error));
-});
+    .catch(error => next(error))
+})
 
 app.get('/api/persons/:id', (req, res, next) => {
   Person.findById(req.params.id)
     .then(person => {
       if (person) {
-        res.json(person);
+        res.json(person)
       } else {
-        res.status(404).end();
+        res.status(404).end()
       }
     })
-    .catch(error => next(error));
-});
+    .catch(error => next(error))
+})
 
 app.post('/api/persons', (req, res, next) => {
-  const body = req.body;
+  const body = req.body
 
   const person = new Person({
     name: body.name,
     number: body.number,
-  });
+  })
 
   person.save()
     .then(savedPerson => {
-      res.json(savedPerson);
+      res.json(savedPerson)
     })
-    .catch(error => next(error));
-});
+    .catch(error => next(error))
+})
 
 app.put('/api/persons/:id', (req, res, next) => {
-  const { name, number } = req.body;
+  const { name, number } = req.body
 
   Person.findByIdAndUpdate(
     req.params.id,
@@ -67,33 +67,32 @@ app.put('/api/persons/:id', (req, res, next) => {
     { new: true, runValidators: true, context: 'query' }
   )
     .then(updatedPerson => {
-      res.json(updatedPerson);
+      res.json(updatedPerson)
     })
-    .catch(error => next(error));
-});
+    .catch(error => next(error))
+})
 
 app.delete('/api/persons/:id', (req, res, next) => {
-  const id = req.params.id;
-  console.log(`Received delete request for id: ${id}`);
+  const id = req.params.id
+  console.log(`Received delete request for id: ${id}`)
 
   Person.findByIdAndDelete(id)
     .then(() => {
-      res.status(204).end();
+      res.status(204).end()
     })
     .catch(error => {
-      console.log(`Error deleting person with id: ${id}`);
-      next(error);
-    });
-});
+      console.log(`Error deleting person with id: ${id}`)
+      next(error)
+    })
+})
 
 app.use((req, res) => {
-  res.status(404).send({ error: 'unknown endpoint' });
-});
+  res.status(404).send({ error: 'unknown endpoint' })
+})
 
-app.use(errorHandler);
+app.use(errorHandler)
 
-
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  console.log(`Server running on port ${PORT}`)
+})
