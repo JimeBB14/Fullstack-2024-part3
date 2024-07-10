@@ -1,84 +1,97 @@
 const express = require('express');
-const morgan = require('morgan');
-const cors = require('cors');
-const path = require('path');
 const app = express();
+const cors = require('cors');
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-app.use(express.json());
+const Person = require('./models/person');
+const errorHandler = require('./middleware/errorHandler'); 
+
 app.use(cors());
+app.use(express.json());
 app.use(express.static('dist'));
 
-morgan.token('body', (req) => JSON.stringify(req.body));
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
+mongoose.set('strictQuery', false);
 
-let persons = [
-  { id: 1, name: "Arto Hellas", number: "040-123456" },
-  { id: 2, name: "Ada Lovelace", number: "39-44-5323523" },
-  { id: 3, name: "Dan Abramov", number: "12-43-234345" },
-  { id: 4, name: "Mary Poppendieck", number: "39-23-6423122" }
-];
+const url = process.env.MONGODB_URI;
 
-// Routes
-app.get('/api/persons', (request, response) => {
-  response.json(persons);
+mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(result => {
+    console.log('Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.log('Error connecting to MongoDB:', error.message);
+  });
+
+app.get('/api/persons', (req, res, next) => {
+  Person.find({})
+    .then(persons => {
+      res.json(persons);
+    })
+    .catch(error => next(error));
 });
 
-app.get('/info', (request, response) => {
-  const date = new Date();
-  response.send(
-    `<p>Phonebook has info for ${persons.length} people</p><p>${date}</p>`
-  );
+app.get('/api/persons/:id', (req, res, next) => {
+  Person.findById(req.params.id)
+    .then(person => {
+      if (person) {
+        res.json(person);
+      } else {
+        res.status(404).end();
+      }
+    })
+    .catch(error => next(error));
 });
 
-app.get('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  const person = persons.find(person => person.id === id);
-  if (person) {
-    response.json(person);
-  } else {
-    response.status(404).end();
-  }
-});
+app.post('/api/persons', (req, res, next) => {
+  const body = req.body;
 
-app.delete('/api/persons/:id', (request, response) => {
-  const id = Number(request.params.id);
-  persons = persons.filter(person => person.id !== id);
-  response.status(204).end();
-});
-
-app.post('/api/persons', (request, response) => {
-  const body = request.body;
-
-  if (!body.name || !body.number) {
-    return response.status(400).json({ error: 'name or number missing' });
-  }
-
-  if (persons.find(person => person.name === body.name)) {
-    return response.status(400).json({ error: 'name must be unique' });
-  }
-
-  const person = {
-    id: Math.floor(Math.random() * 10000),
+  const person = new Person({
     name: body.name,
-    number: body.number
-  };
+    number: body.number,
+  });
 
-  persons = persons.concat(person);
-  response.json(person);
+  person.save()
+    .then(savedPerson => {
+      res.json(savedPerson);
+    })
+    .catch(error => next(error));
 });
 
+app.put('/api/persons/:id', (req, res, next) => {
+  const { name, number } = req.body;
 
-app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+  Person.findByIdAndUpdate(
+    req.params.id,
+    { name, number },
+    { new: true, runValidators: true, context: 'query' }
+  )
+    .then(updatedPerson => {
+      res.json(updatedPerson);
+    })
+    .catch(error => next(error));
 });
 
-const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: 'unknown endpoint' });
-};
+app.delete('/api/persons/:id', (req, res, next) => {
+  const id = req.params.id;
+  console.log(`Received delete request for id: ${id}`);
 
-app.use(unknownEndpoint);
+  Person.findByIdAndRemove(id)
+    .then(() => {
+      res.status(204).end();
+    })
+    .catch(error => {
+      console.log(`Error deleting person with id: ${id}`);
+      next(error);
+    });
+});
 
-// Server
+app.use((req, res) => {
+  res.status(404).send({ error: 'unknown endpoint' });
+});
+
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
