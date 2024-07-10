@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const Person = require('./models/person');
-const errorHandler = require('./middleware/errorHandler'); 
+const errorHandler = require('./middleware/errorHandler');
 
 app.use(cors());
 app.use(express.json());
@@ -76,7 +76,7 @@ app.delete('/api/persons/:id', (req, res, next) => {
   const id = req.params.id;
   console.log(`Received delete request for id: ${id}`);
 
-  Person.findByIdAndRemove(id)
+  Person.findByIdAndDelete(id)
     .then(() => {
       res.status(204).end();
     })
@@ -91,6 +91,7 @@ app.use((req, res) => {
 });
 
 app.use(errorHandler);
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
